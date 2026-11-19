@@ -26,6 +26,7 @@ async function bootstrap() {
     .setTitle('Miskila - API')
     .setDescription('API REST para la gestión de pedidos de Miskila')
     .setVersion('1.0')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, swaggerDocument);
