@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import axios from 'axios'
 import api from '../services/api'
 
@@ -13,17 +13,22 @@ interface Producto {
   id: number
   nombre: string
   descripcion: string | null
+  foto: string | null
   categoria: Categoria
   precioBs: string
   puntos: number
   disponible: boolean
   esPersonalizada: boolean
+  orden: number
 }
 
 const categorias = ref<Categoria[]>([])
 const productos = ref<Producto[]>([])
 const cargando = ref(true)
 const guardando = ref(false)
+const productoEditandoId = ref<number | null>(null)
+const categoriaOriginalId = ref<number | null>(null)
+const operacionProductoId = ref<number | null>(null)
 const error = ref('')
 const mensaje = ref('')
 
@@ -34,9 +39,20 @@ const formulario = reactive({
   foto: '',
   precioBs: 0,
   puntos: 1,
-  disponible: true,
   esPersonalizada: false,
   orden: 0,
+})
+
+const categoriasParaFormulario = computed(() => {
+  const activas = categorias.value.filter((categoria) => categoria.activa)
+  const categoriaActual = categorias.value.find(
+    (categoria) => categoria.id === formulario.categoriaId,
+  )
+
+  if (categoriaActual && !categoriaActual.activa) {
+    return [...activas, categoriaActual]
+  }
+  return activas
 })
 
 async function cargarDatos() {
@@ -48,7 +64,7 @@ async function cargarDatos() {
       api.get<Categoria[]>('/categorias'),
       api.get<Producto[]>('/productos'),
     ])
-    categorias.value = respuestaCategorias.data.filter((categoria) => categoria.activa)
+    categorias.value = respuestaCategorias.data
     productos.value = respuestaProductos.data
   } catch (cause) {
     console.error('No se pudieron cargar los datos de productos.', cause)
@@ -58,33 +74,114 @@ async function cargarDatos() {
   }
 }
 
-async function crearProducto() {
+function limpiarFormulario() {
+  productoEditandoId.value = null
+  categoriaOriginalId.value = null
+  formulario.categoriaId = null
+  formulario.nombre = ''
+  formulario.descripcion = ''
+  formulario.foto = ''
+  formulario.precioBs = 0
+  formulario.puntos = 1
+  formulario.esPersonalizada = false
+  formulario.orden = 0
+}
+
+function comenzarEdicion(producto: Producto) {
+  productoEditandoId.value = producto.id
+  categoriaOriginalId.value = producto.categoria.id
+  formulario.categoriaId = producto.categoria.id
+  formulario.nombre = producto.nombre
+  formulario.descripcion = producto.descripcion ?? ''
+  formulario.foto = producto.foto ?? ''
+  formulario.precioBs = Number(producto.precioBs)
+  formulario.puntos = producto.puntos
+  formulario.esPersonalizada = producto.esPersonalizada
+  formulario.orden = producto.orden
+  error.value = ''
+  mensaje.value = ''
+}
+
+async function guardarProducto() {
+  if (formulario.categoriaId === null) {
+    error.value = 'Selecciona una categoría activa.'
+    return
+  }
+
   guardando.value = true
   error.value = ''
   mensaje.value = ''
 
+  const productoId = productoEditandoId.value
+  const campos = {
+    nombre: formulario.nombre.trim(),
+    descripcion: formulario.descripcion.trim() || null,
+    foto: formulario.foto.trim() || null,
+    precioBs: formulario.precioBs,
+    puntos: formulario.puntos,
+    esPersonalizada: formulario.esPersonalizada,
+    orden: formulario.orden,
+  }
+
   try {
-    await api.post('/productos', {
-      ...formulario,
-      nombre: formulario.nombre.trim(),
-      descripcion: formulario.descripcion.trim() || null,
-      foto: formulario.foto.trim() || null,
-    })
-    formulario.nombre = ''
-    formulario.descripcion = ''
-    formulario.foto = ''
-    formulario.precioBs = 0
-    formulario.puntos = 1
-    mensaje.value = 'El producto se creó correctamente.'
+    if (productoId === null) {
+      await api.post('/productos', {
+        ...campos,
+        categoriaId: formulario.categoriaId,
+        disponible: true,
+      })
+      mensaje.value = 'El producto se creó correctamente.'
+    } else {
+      const datosActualizacion =
+        formulario.categoriaId === categoriaOriginalId.value
+          ? campos
+          : { ...campos, categoriaId: formulario.categoriaId }
+      await api.patch(`/productos/${productoId}`, datosActualizacion)
+      mensaje.value = 'El producto se actualizó correctamente.'
+    }
+
+    limpiarFormulario()
     await cargarDatos()
   } catch (cause) {
-    console.error('No se pudo crear el producto.', cause)
+    console.error('No se pudo guardar el producto.', cause)
     error.value =
-      axios.isAxiosError(cause) && cause.response?.status === 404
+      axios.isAxiosError(cause) &&
+      [400, 404].includes(cause.response?.status ?? 0)
         ? 'La categoría seleccionada ya no está disponible. Actualiza la lista.'
         : 'No se pudo guardar el producto. Verifica los datos e inténtalo nuevamente.'
   } finally {
     guardando.value = false
+  }
+}
+
+async function cambiarDisponibilidad(producto: Producto) {
+  if (
+    producto.disponible &&
+    !window.confirm(
+      `¿Eliminar "${producto.nombre}" del catálogo? Se conservará su registro para el historial.`,
+    )
+  ) {
+    return
+  }
+
+  operacionProductoId.value = producto.id
+  error.value = ''
+  mensaje.value = ''
+
+  try {
+    if (producto.disponible) {
+      await api.delete(`/productos/${producto.id}`)
+      mensaje.value = 'El producto se retiró del catálogo; su registro se conservó.'
+    } else {
+      await api.patch(`/productos/${producto.id}`, { disponible: true })
+      mensaje.value = 'El producto volvió a estar disponible.'
+    }
+    await cargarDatos()
+  } catch (cause) {
+    console.error('No se pudo cambiar la disponibilidad del producto.', cause)
+    error.value = 'No se pudo cambiar el estado del producto. Inténtalo nuevamente.'
+  } finally {
+    operacionProductoId.value = null
   }
 }
 
@@ -106,9 +203,11 @@ onMounted(cargarDatos)
 
     <div class="row g-4">
       <div class="col-lg-5">
-        <form class="card border-0 shadow-sm" @submit.prevent="crearProducto">
+        <form class="card border-0 shadow-sm" @submit.prevent="guardarProducto">
           <div class="card-body p-4">
-            <h3 class="h4 fw-bold mb-3">Nuevo producto</h3>
+            <h3 class="h4 fw-bold mb-3">
+              {{ productoEditandoId === null ? 'Nuevo producto' : 'Editar producto' }}
+            </h3>
 
             <div class="mb-3">
               <label for="categoria-producto" class="form-label">Categoría</label>
@@ -117,13 +216,21 @@ onMounted(cargarDatos)
                 v-model.number="formulario.categoriaId"
                 class="form-select"
                 required
-                :disabled="cargando || categorias.length === 0"
+                :disabled="cargando || categoriasParaFormulario.length === 0"
               >
                 <option :value="null" disabled>
-                  {{ categorias.length === 0 ? 'Primero crea una categoría' : 'Selecciona una categoría' }}
+                  {{
+                    categoriasParaFormulario.length === 0
+                      ? 'Primero crea una categoría'
+                      : 'Selecciona una categoría'
+                  }}
                 </option>
-                <option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">
-                  {{ categoria.nombre }}
+                <option
+                  v-for="categoria in categoriasParaFormulario"
+                  :key="categoria.id"
+                  :value="categoria.id"
+                >
+                  {{ categoria.nombre }}{{ categoria.activa ? '' : ' (inactiva)' }}
                 </option>
               </select>
             </div>
@@ -206,9 +313,24 @@ onMounted(cargarDatos)
             <button
               class="btn btn-primary w-100"
               type="submit"
-              :disabled="guardando || cargando || categorias.length === 0"
+              :disabled="guardando || cargando || categoriasParaFormulario.length === 0"
             >
-              {{ guardando ? 'Guardando...' : 'Crear producto' }}
+              {{
+                guardando
+                  ? 'Guardando...'
+                  : productoEditandoId === null
+                    ? 'Crear producto'
+                    : 'Guardar cambios'
+              }}
+            </button>
+            <button
+              v-if="productoEditandoId !== null"
+              class="btn btn-outline-secondary w-100 mt-2"
+              type="button"
+              :disabled="guardando"
+              @click="limpiarFormulario"
+            >
+              Cancelar edición
             </button>
           </div>
         </form>
@@ -249,6 +371,9 @@ onMounted(cargarDatos)
                 <p v-if="producto.descripcion" class="small mb-0">
                   {{ producto.descripcion }}
                 </p>
+                <span v-if="producto.esPersonalizada" class="badge text-bg-info mt-2">
+                  Personalizado
+                </span>
               </div>
               <div class="text-end">
                 <span class="fw-semibold">Bs {{ Number(producto.precioBs).toFixed(2) }}</span>
@@ -257,8 +382,26 @@ onMounted(cargarDatos)
                     class="badge mt-1"
                     :class="producto.disponible ? 'text-bg-success' : 'text-bg-secondary'"
                   >
-                    {{ producto.disponible ? 'Disponible' : 'Pausado' }}
+                    {{ producto.disponible ? 'Disponible' : 'Retirado' }}
                   </span>
+                  <div class="d-flex justify-content-end gap-2 mt-2">
+                    <button
+                      class="btn btn-outline-primary btn-sm"
+                      type="button"
+                      :disabled="operacionProductoId !== null"
+                      @click="comenzarEdicion(producto)"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary btn-sm"
+                      type="button"
+                      :disabled="operacionProductoId !== null"
+                      @click="cambiarDisponibilidad(producto)"
+                    >
+                      {{ producto.disponible ? 'Eliminar' : 'Restaurar' }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
