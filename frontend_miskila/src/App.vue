@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import axios from 'axios'
 import api from './services/api'
+import ProductosAdmin from './components/ProductosAdmin.vue'
 
 interface Categoria {
   id: number
@@ -133,7 +134,10 @@ onMounted(cargarCategorias)
   <header class="border-bottom bg-white">
     <nav class="navbar container py-3" aria-label="Navegación principal">
       <a class="navbar-brand miskila-brand fw-bold fs-3" href="#">Miskila</a>
-      <span class="text-secondary">Pastelería por pedido en Sucre</span>
+      <div class="d-flex align-items-center gap-3">
+        <a class="link-secondary text-decoration-none" href="#categorias">Categorías</a>
+        <a class="link-secondary text-decoration-none" href="#productos">Productos</a>
+      </div>
     </nav>
   </header>
 
@@ -306,6 +310,8 @@ onMounted(cargarCategorias)
         </div>
       </div>
     </section>
+
+    <ProductosAdmin />
   </main>
 
   <footer class="border-top bg-white py-3">
