@@ -14,6 +14,9 @@ async function bootstrap() {
     }),
   );
   app.setGlobalPrefix('api');
+  app.enableCors({
+    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
+  });
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
