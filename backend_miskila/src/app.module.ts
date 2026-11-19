@@ -5,6 +5,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { CategoriasModule } from './categorias/categorias.module.js';
 import { ProductosModule } from './productos/productos.module.js';
+import { UsuariosModule } from './usuarios/usuarios.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProductosModule } from './productos/productos.module.js';
     }),
     CategoriasModule,
     ProductosModule,
+    UsuariosModule,
   ],
   controllers: [AppController],
   providers: [AppService],
