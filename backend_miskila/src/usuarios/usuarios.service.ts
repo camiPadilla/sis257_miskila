@@ -1,115 +1,24 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { hash, compare } from 'bcryptjs';
-import { QueryFailedError, Repository } from 'typeorm';
-import { RegisterDto } from '../auth/dto/register.dto.js';
-import {
-  EstadoCuenta,
-  RolUsuario,
-  Usuario,
-} from './entities/usuario.entity.js';
-
-export type UsuarioPublico = Pick<
-  Usuario,
-  | 'id'
-  | 'celular'
-  | 'nombreCompleto'
-  | 'rol'
-  | 'estadoCuenta'
-  | 'debeCambiarContrasena'
->;
+import { compare, hash } from 'bcryptjs';
+import { Repository } from 'typeorm';
+import { EstadoUsuario, RolUsuario, UsuarioModelo } from '../database/entities/usuario.entity.js';
 
 @Injectable()
 export class UsuariosService {
-  constructor(
-    @InjectRepository(Usuario)
-    private readonly usuariosRepository: Repository<Usuario>,
-  ) {}
-
-  async registerCliente(registerDto: RegisterDto): Promise<UsuarioPublico> {
-    const existing = await this.usuariosRepository.findOneBy({
-      celular: registerDto.celular,
-    });
-    if (existing?.estadoCuenta === EstadoCuenta.BANEADA) {
-      throw new ForbiddenException('No es posible registrar ese número');
-    }
-    if (existing) {
-      throw new ConflictException(
-        'Ese celular ya está registrado. Si olvidaste tu contraseña, comunícate con Miskila por WhatsApp.',
-      );
-    }
-
-    const usuario = this.usuariosRepository.create({
-      celular: registerDto.celular,
-      contrasenaCifrada: await hash(registerDto.contrasena, 12),
-      nombreCompleto: null,
-      rol: RolUsuario.CLIENTE,
-      estadoCuenta: EstadoCuenta.ACTIVA,
-      suspendidoHasta: null,
-      cancelacionesHoy: 0,
-      fechaContador: null,
-      debeCambiarContrasena: false,
-      aceptoTerminosEl: new Date(),
-      creadoPor: null,
-    });
-
-    try {
-      return this.toPublico(await this.usuariosRepository.save(usuario));
-    } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        error.driverError?.code === '23505'
-      ) {
-        throw new ConflictException(
-          'Ese celular ya está registrado. Si olvidaste tu contraseña, comunícate con Miskila por WhatsApp.',
-        );
-      }
-      throw error;
-    }
+  constructor(@InjectRepository(UsuarioModelo) private readonly usuarios: Repository<UsuarioModelo>) {}
+  publico(usuario: UsuarioModelo) { return { idUsuario: usuario.idUsuario, celular: usuario.celular, nombreCompleto: usuario.nombreCompleto, rol: usuario.rol, estado: usuario.estado }; }
+  async register(celular: string, contrasena: string) {
+    const existente = await this.usuarios.findOneBy({ celular });
+    if (existente?.estado === EstadoUsuario.BANEADO) throw new ForbiddenException('No es posible registrar ese número.');
+    if (existente) throw new ConflictException({ codigo: 'CELULAR_YA_REGISTRADO', message: 'Este número ya está registrado. Si olvidaste tu contraseña, escribe a soporte de Miskila.' });
+    return this.publico(await this.usuarios.save(this.usuarios.create({ celular, contrasena: await hash(contrasena, 12), rol: RolUsuario.CLIENTE, estado: EstadoUsuario.ACTIVO, nombreCompleto: null })));
   }
-
-  async validateCredentials(
-    celular: string,
-    contrasena: string,
-  ): Promise<UsuarioPublico> {
-    const usuario = await this.usuariosRepository
-      .createQueryBuilder('usuario')
-      .addSelect('usuario.contrasenaCifrada')
-      .where('usuario.celular = :celular', { celular })
-      .getOne();
-
-    if (
-      !usuario ||
-      !(await compare(contrasena, usuario.contrasenaCifrada))
-    ) {
-      throw new UnauthorizedException('Celular o contraseña incorrectos');
-    }
-
-    return this.toPublico(usuario);
+  async login(celular: string, contrasena: string) {
+    const usuario = await this.usuarios.findOneBy({ celular });
+    if (!usuario || !(await compare(contrasena, usuario.contrasena))) throw new UnauthorizedException('Celular o contraseña incorrectos');
+    return usuario;
   }
-
-  async findPublicById(id: number): Promise<UsuarioPublico> {
-    const usuario = await this.usuariosRepository.findOneBy({ id });
-    if (!usuario) {
-      throw new NotFoundException('La cuenta ya no existe');
-    }
-    return this.toPublico(usuario);
-  }
-
-  private toPublico(usuario: Usuario): UsuarioPublico {
-    return {
-      id: usuario.id,
-      celular: usuario.celular,
-      nombreCompleto: usuario.nombreCompleto,
-      rol: usuario.rol,
-      estadoCuenta: usuario.estadoCuenta,
-      debeCambiarContrasena: usuario.debeCambiarContrasena,
-    };
-  }
+  async byId(idUsuario: number) { const usuario = await this.usuarios.findOneBy({ idUsuario }); if (!usuario) throw new NotFoundException('La cuenta ya no existe'); return usuario; }
+  async completeName(idUsuario: number, nombreCompleto: string) { const usuario = await this.byId(idUsuario); usuario.nombreCompleto = nombreCompleto.trim(); return this.publico(await this.usuarios.save(usuario)); }
 }

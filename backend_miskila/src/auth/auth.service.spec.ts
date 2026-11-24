@@ -2,14 +2,19 @@ import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UsuariosService } from '../usuarios/usuarios.service.js';
-import { RolUsuario, EstadoCuenta } from '../usuarios/entities/usuario.entity.js';
+import { RolUsuario, EstadoUsuario } from '../database/entities/usuario.entity.js';
 import { AuthService } from './auth.service.js';
 
 describe('AuthService', () => {
   const usuariosService = {
-    registerCliente: vi.fn(),
-    validateCredentials: vi.fn(),
-    findPublicById: vi.fn(),
+    login: vi.fn(),
+    publico: vi.fn((usuario) => ({
+      idUsuario: usuario.idUsuario,
+      celular: usuario.celular,
+      nombreCompleto: usuario.nombreCompleto,
+      rol: usuario.rol,
+      estado: usuario.estado,
+    })),
   };
   const jwtService = {
     signAsync: vi.fn(),
@@ -29,21 +34,20 @@ describe('AuthService', () => {
   });
 
   it('issues a JWT containing the user id and role', async () => {
-    usuariosService.validateCredentials.mockResolvedValue({
-      id: 7,
+    usuariosService.login.mockResolvedValue({
+      idUsuario: 7,
       celular: '73463222',
       nombreCompleto: null,
       rol: RolUsuario.CLIENTE,
-      estadoCuenta: EstadoCuenta.ACTIVA,
-      debeCambiarContrasena: false,
+      estado: EstadoUsuario.ACTIVO,
     });
     jwtService.signAsync.mockResolvedValue('signed-token');
 
     await expect(
-      service.login({ celular: '73463222', contrasena: 'password-segura' }),
+      service.login('73463222', 'password-segura'),
     ).resolves.toMatchObject({
       accessToken: 'signed-token',
-      usuario: { id: 7, rol: RolUsuario.CLIENTE },
+      usuario: { idUsuario: 7, rol: RolUsuario.CLIENTE },
     });
     expect(jwtService.signAsync).toHaveBeenCalledWith({
       sub: 7,

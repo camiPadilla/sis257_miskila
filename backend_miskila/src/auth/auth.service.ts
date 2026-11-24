@@ -1,38 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsuariosService, UsuarioPublico } from '../usuarios/usuarios.service.js';
-import { LoginDto } from './dto/login.dto.js';
-import { RegisterDto } from './dto/register.dto.js';
-import { JwtPayload } from './interfaces/jwt-payload.interface.js';
-
-export interface AuthResponse {
-  accessToken: string;
-  usuario: UsuarioPublico;
-}
+import { UsuariosService } from '../usuarios/usuarios.service.js';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly usuariosService: UsuariosService,
-    private readonly jwtService: JwtService,
-  ) {}
-
-  register(registerDto: RegisterDto): Promise<UsuarioPublico> {
-    return this.usuariosService.registerCliente(registerDto);
-  }
-
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const usuario = await this.usuariosService.validateCredentials(
-      loginDto.celular,
-      loginDto.contrasena,
-    );
-    const payload: JwtPayload = { sub: usuario.id, rol: usuario.rol };
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    return { accessToken, usuario };
-  }
-
-  getProfile(userId: number): Promise<UsuarioPublico> {
-    return this.usuariosService.findPublicById(userId);
-  }
+  constructor(private readonly usuarios: UsuariosService, private readonly jwt: JwtService) {}
+  async register(celular: string, contrasena: string) { return this.usuarios.register(celular, contrasena); }
+  async login(celular: string, contrasena: string) { const usuario = await this.usuarios.login(celular, contrasena); return { accessToken: await this.jwt.signAsync({ sub: usuario.idUsuario, rol: usuario.rol }), usuario: this.usuarios.publico(usuario) }; }
+  me(idUsuario: number) { return this.usuarios.byId(idUsuario).then((usuario) => this.usuarios.publico(usuario)); }
+  completeName(idUsuario: number, nombreCompleto: string) { return this.usuarios.completeName(idUsuario, nombreCompleto); }
 }

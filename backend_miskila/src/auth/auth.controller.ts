@@ -1,47 +1,16 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
-import { AuthService } from './auth.service.js';
-import { LoginDto } from './dto/login.dto.js';
-import { RegisterDto } from './dto/register.dto.js';
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { IsByteLength, IsString, Matches } from 'class-validator';
+import { AuthPublic } from './decorators/auth-public.decorator.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
-import { JwtPayload } from './interfaces/jwt-payload.interface.js';
+import { AuthService } from './auth.service.js';
 
-type AuthenticatedRequest = Request & { user: JwtPayload };
-
-@ApiTags('autenticacion')
+class CuentaDto { @IsString() @Matches(/^[67]\d{7}$/) celular!: string; @IsString() @IsByteLength(8, 72) contrasena!: string; }
+class NombreDto { @IsString() nombreCompleto!: string; }
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Registrar una cuenta de cliente' })
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
-  }
-
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Iniciar sesión y obtener un JWT' })
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
-  }
-
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Consultar el perfil de la cuenta autenticada' })
-  profile(@Req() request: AuthenticatedRequest) {
-    return this.authService.getProfile(request.user.sub);
-  }
+  constructor(private readonly auth: AuthService) {}
+  @Post('register') @AuthPublic() register(@Body() body: CuentaDto) { return this.auth.register(body.celular, body.contrasena); }
+  @Post('login') @AuthPublic() login(@Body() body: CuentaDto) { return this.auth.login(body.celular, body.contrasena); }
+  @Get('me') @UseGuards(JwtAuthGuard) me(@Req() request: { user: { sub: number } }) { return this.auth.me(request.user.sub); }
+  @Patch('nombre') @UseGuards(JwtAuthGuard) completeName(@Req() request: { user: { sub: number } }, @Body() body: NombreDto) { return this.auth.completeName(request.user.sub, body.nombreCompleto); }
 }

@@ -1,21 +1,18 @@
-import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Categoria } from '../categorias/entities/categoria.entity.js';
-import { Producto } from './entities/producto.entity.js';
+import { ProductoModelo } from '../database/entities/producto.entity.js';
+import { PresentacionModelo } from '../database/entities/presentacion.entity.js';
 import { ProductosService } from './productos.service.js';
 
 describe('ProductosService', () => {
   const productosRepository = {
     find: vi.fn(),
-    findOne: vi.fn(),
+    findOneBy: vi.fn(),
     create: vi.fn(),
     save: vi.fn(),
   };
-  const categoriasRepository = {
-    findOneBy: vi.fn(),
-  };
+  const presentacionesRepository = { find: vi.fn(), findOneBy: vi.fn(), create: vi.fn(), save: vi.fn() };
   let service: ProductosService;
 
   beforeEach(async () => {
@@ -24,47 +21,38 @@ describe('ProductosService', () => {
       providers: [
         ProductosService,
         {
-          provide: getRepositoryToken(Producto),
+          provide: getRepositoryToken(ProductoModelo),
           useValue: productosRepository,
         },
         {
-          provide: getRepositoryToken(Categoria),
-          useValue: categoriasRepository,
+          provide: getRepositoryToken(PresentacionModelo),
+          useValue: presentacionesRepository,
         },
       ],
     }).compile();
     service = moduleRef.get(ProductosService);
   });
 
-  it('rejects products assigned to an inactive category', async () => {
-    categoriasRepository.findOneBy.mockResolvedValue({
-      id: 1,
-      nombre: 'Tortas',
-      orden: 0,
-      activa: false,
-    });
-
-    await expect(
-      service.create({
-        categoriaId: 1,
-        nombre: 'Torta de chocolate',
-        precioBs: 45,
-        puntos: 100,
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('marks a product unavailable instead of deleting it', async () => {
-    const producto = {
-      id: 1,
-      nombre: 'Torta de chocolate',
-      disponible: true,
-    };
-    productosRepository.findOne.mockResolvedValue(producto);
+  it('creates a product with the new catalog model', async () => {
+    productosRepository.create.mockImplementation((value) => value);
     productosRepository.save.mockImplementation(async (value) => value);
 
-    await expect(service.remove(1)).resolves.toMatchObject({
-      disponible: false,
+    await expect(service.create({ nombre: 'Torta de chocolate', categoria: 'tortas', pausado: false })).resolves.toMatchObject({
+      nombre: 'Torta de chocolate',
+    });
+  });
+
+  it('pauses a product instead of deleting it', async () => {
+    const producto = {
+      idProducto: 1,
+      nombre: 'Torta de chocolate',
+      pausado: false,
+    };
+    productosRepository.findOneBy.mockResolvedValue(producto);
+    productosRepository.save.mockImplementation(async (value) => value);
+
+    await expect(service.update(1, { pausado: true })).resolves.toMatchObject({
+      pausado: true,
     });
   });
 });

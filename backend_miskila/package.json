@@ -9,6 +9,8 @@
   "scripts": {
     "build": "nest build",
     "deploy": "nest deploy",
+    "migration:run": "node dist/database/migration-runner.js",
+    "seed": "node dist/database/seed.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

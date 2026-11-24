@@ -3,10 +3,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { entidadesMiskila } from './database/data-source.js';
+import { InicialMiskila1774300000000 } from './database/migrations/1774300000000-inicial-miskila.js';
 import { AuthModule } from './auth/auth.module.js';
-import { CategoriasModule } from './categorias/categorias.module.js';
 import { ProductosModule } from './productos/productos.module.js';
-import { UsuariosModule } from './usuarios/usuarios.module.js';
+import { CapacidadModule } from './capacidad/capacidad.module.js';
+import { ConfiguracionModule } from './configuracion/configuracion.module.js';
+import { PedidosModule } from './pedidos/pedidos.module.js';
+import { PagosModule } from './pagos/pagos.module.js';
+import { ReembolsosModule } from './reembolsos/reembolsos.module.js';
+import { ReportesModule } from './reportes/reportes.module.js';
+import { SancionesModule } from './sanciones/sanciones.module.js';
 
 @Module({
   imports: [
@@ -27,15 +34,22 @@ import { UsuariosModule } from './usuarios/usuarios.module.js';
           username: config.getOrThrow<string>('DB_USERNAME'),
           password: config.getOrThrow<string>('DB_PASSWORD'),
           database: config.getOrThrow<string>('DB_NAME'),
-          autoLoadEntities: true,
-          synchronize: config.get<string>('NODE_ENV', 'development') === 'development',
+          entities: entidadesMiskila,
+          migrations: [InicialMiskila1774300000000],
+          migrationsRun: config.get<string>('RUN_MIGRATIONS', 'true') === 'true',
+          synchronize: false,
         };
       },
     }),
     AuthModule,
-    CategoriasModule,
     ProductosModule,
-    UsuariosModule,
+    CapacidadModule,
+    ConfiguracionModule,
+    PedidosModule,
+    PagosModule,
+    ReembolsosModule,
+    ReportesModule,
+    SancionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

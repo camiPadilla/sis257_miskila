@@ -1,4 +1,32 @@
-# Miskila - Sistema de pedidos en línea
+## Resumen del negocio
+
+Miskila trabaja exclusivamente bajo pedido: no hay stock de productos terminados ni control de insumos. La capacidad se controla con puntos por presentación y un límite diario de 500 puntos por defecto. El pago es únicamente por QR; el comprobante enviado por WhatsApp es opcional y la verificación depende de que el dinero llegue.
+
+La entrega puede ser a domicilio por Bs 13 o retiro en el área de producción de Miskila sin costo. La modalidad se elige una sola vez al comprar. El contacto manual del negocio es [https://wa.link/m0juem](https://wa.link/m0juem).
+
+## Reglas del negocio
+
+- Las compras se realizan de lunes a viernes, de 9:00 a 18:00; a las 18:00 exactas la compra está cerrada.
+- Las entregas y retiros se realizan todos los días de 7:00 a 20:00.
+- La entrega se programa con mínimo 24 horas exactas y máximo 5 días desde la compra.
+- Al presionar **Comprar** se registra el pedido, se crea su pago `pendiente` y se descuentan los puntos.
+- El plazo para pagar, cancelar o solicitar reembolso es de 8 horas desde la compra.
+- Si no llega el pago y el administrador lo marca después de las 8 horas, el pedido pasa a `no_pagado`, se liberan los puntos y la cuenta se suspende por 7 días.
+- Los puntos se devuelven al solicitar un reembolso. Los reembolsos fuera de 9:00 a 18:00 se atienden a primera hora del día siguiente.
+- Dos cancelaciones el mismo día suspenden la cuenta durante 24 horas. Los reembolsos no cuentan como cancelaciones.
+- Un comprobante falso puede causar un baneo permanente.
+
+### Mensajes de capacidad
+
+- Sin puntos disponibles: **“Nos quedamos sin manos para esta fecha. Vuelve mañana a comprar.”**
+- Si solo caben presentaciones pequeñas: **“Solo puedes escoger productos más pequeños. Si quieres más, contacta a Miskila a través de WhatsApp.”**
+- No existe un tercer mensaje de cupo por tipo de producto.
+
+### Entidades 
+
+La base de datos contiene `usuario`, `sancion`, `producto`, `presentacion`, `capacidad_dia`, `pedido`, `detalle_pedido`, `pago` y `reembolso`. Las tablas y columnas usan `snake_case`; las propiedades TypeScript usan `camelCase` y se mapean mediante TypeORM.
+
+Los estados de pedido son `pendiente_pago`, `pagado`, `no_pagado`, `cancelado`, `reembolso_solicitado`, `reembolsado` y `entregado`.
 
 Sistema web para gestionar pedidos de postres de Miskila, un negocio de Sucre, Bolivia, que trabaja por encargo y coordina con sus clientes por WhatsApp.
 
@@ -11,7 +39,7 @@ Sistema web para gestionar pedidos de postres de Miskila, un negocio de Sucre, B
 1. **Venta por pedido:** los productos se preparan según la demanda y no se controla stock de unidades terminadas.
 2. **Capacidad de producción:** cada fecha de entrega tiene inicialmente 500 puntos. Cada producto consume puntos según su tipo y tamaño.
 3. **Entrega local:** los pedidos se entregan a domicilio en Sucre por Bs 13 o se recogen en el local sin costo.
-4. **Pago por QR:** el cliente paga mediante el QR fijo de Miskila y envía el comprobante por WhatsApp. El administrador verifica el depósito.
+4. **Pago por QR:** el cliente paga mediante el QR fijo de Miskila. El comprobante por WhatsApp es opcional; el administrador verifica que el dinero llegue y que el monto sea correcto.
 5. **Pedidos personalizados:** el precio de una torta personalizada se acuerda por WhatsApp y el equipo registra el pedido desde el panel.
 
 ## Objetivos del Sistema
@@ -22,19 +50,13 @@ Sistema web para gestionar pedidos de postres de Miskila, un negocio de Sucre, B
 - Validar las fechas de entrega y la capacidad disponible antes de confirmar una compra.
 - Dar seguimiento al pago y al estado de cada pedido.
 
----
-
-## Modelo de Datos (Entidades y Campos Tentativos)
-
-La estructura inicial de la base de datos PostgreSQL se propone a continuación. Los campos y relaciones se revisarán antes de generar las entidades del backend.
-
 ### 1. Categoria
 
 Clasifica los productos del catálogo.
 
 | Campo | Tipo de Dato | Descripción |
 |---|---|---|
-| `id` | INT (PK) | Identificador único. |
+| `id` | INT (PK) | Identificador de la clasificación. |
 | `nombre` | VARCHAR | Nombre, por ejemplo: "Masitas", "Tortas" o "3 leches". |
 | `orden` | INT | Posición en que aparece en el catálogo. |
 | `activa` | BOOLEAN | Indica si la categoría se muestra. |
@@ -45,16 +67,12 @@ Productos que los clientes pueden incluir en sus pedidos.
 
 | Campo | Tipo de Dato | Descripción |
 |---|---|---|
-| `id` | INT (PK) | Identificador único. |
-| `categoria_id` | INT (FK) | Categoría a la que pertenece. |
-| `nombre` | VARCHAR | Nombre y tamaño del producto. |
-| `descripcion` | TEXT | Descripción para el catálogo. |
-| `foto` | VARCHAR | Ruta o URL de la imagen. |
-| `precio_bs` | DECIMAL | Precio de venta en bolivianos. |
-| `puntos` | INT | Capacidad de producción consumida por unidad. |
-| `disponible` | BOOLEAN | Indica si se aceptan pedidos para este producto. |
-| `es_personalizada` | BOOLEAN | Indica si se cotiza y registra desde el panel. |
-| `orden` | INT | Posición en que aparece dentro de la categoría. |
+| `id_producto` | INT (PK) | Identificador único. |
+| `nombre` | VARCHAR(100) | Nombre del producto. |
+| `descripcion` | VARCHAR(255), NULL | Descripción para el catálogo. |
+| `categoria` | VARCHAR(50) | Categoría del producto. |
+| `imagen` | VARCHAR(255), NULL | Ruta de la imagen. |
+| `pausado` | BOOLEAN | Indica si el administrador pausó el producto. |
 
 ### 3. Usuario
 
@@ -62,15 +80,13 @@ Clientes, empleados y administradores del sistema.
 
 | Campo | Tipo de Dato | Descripción |
 |---|---|---|
-| `id` | INT (PK) | Identificador único. |
+| `id_usuario` | INT (PK) | Identificador único. |
 | `celular` | VARCHAR | Número boliviano único; se usa para iniciar sesión. |
-| `contrasena_cifrada` | VARCHAR | Contraseña almacenada mediante hash, nunca en texto plano. |
+| `contrasena` | VARCHAR(255) | Contraseña almacenada mediante hash, nunca en texto plano. |
 | `nombre_completo` | VARCHAR | Nombre del usuario; obligatorio para continuar tras el primer ingreso. |
 | `rol` | VARCHAR | `cliente`, `empleado` o `administrador`. |
-| `estado_cuenta` | VARCHAR | `activa`, `suspendida` o `baneada`. |
-| `debe_cambiar_contrasena` | BOOLEAN | Indica si debe reemplazar una contraseña temporal. |
-| `acepto_terminos_el` | TIMESTAMP | Fecha y hora en que aceptó los términos. |
-| `creado_el` | TIMESTAMP | Fecha y hora de creación de la cuenta. |
+| `estado` | VARCHAR | `activo`, `suspendido` o `baneado`. |
+| `fecha_registro` | TIMESTAMP | Fecha y hora de creación de la cuenta. |
 
 El registro público es solo para clientes. Las cuentas del equipo las crea un administrador.
 
@@ -90,12 +106,11 @@ Cabecera del pedido y datos de entrega elegidos por el cliente.
 | `costo_domicilio_bs` | DECIMAL | Bs 13 para domicilio o Bs 0 para retiro. |
 | `total_bs` | DECIMAL | Total fijado al crear el pedido, incluido el costo de domicilio. |
 | `puntos_totales` | INT | Puntos consumidos para la fecha de entrega. |
-| `estado` | VARCHAR | Estado del pedido, por ejemplo: `por_verificar`, `verificado` o `entregado`. |
+| `estado` | VARCHAR | `pendiente_pago`, `pagado`, `no_pagado`, `cancelado`, `reembolso_solicitado`, `reembolsado` o `entregado`. |
 | `comprado_el` | TIMESTAMP | Fecha y hora de creación del pedido. |
-| `pagar_antes_de` | TIMESTAMP | Plazo habitual de pago: dos horas desde la compra. |
-| `verificar_antes_de` | TIMESTAMP | Plazo habitual para que el administrador verifique el pago: seis horas desde la compra. |
-| `verificado_el` | TIMESTAMP | Fecha y hora en que se confirmó el pago. |
-| `verificado_por_id` | INT (FK) | Administrador que verificó el pago. |
+| `limite_pago` | TIMESTAMP | Plazo de 8 horas desde la compra. |
+| `listo` | BOOLEAN | Marca interna para empleados y administradores. |
+| `fecha_cancelacion` | TIMESTAMP | Fecha de cancelación, si corresponde. |
 
 ### 5. DetallePedido
 
@@ -124,19 +139,20 @@ Registro de la verificación manual de los pagos recibidos.
 | `fecha_pago` | TIMESTAMP | Fecha y hora en que se registró el pago. |
 | `verificado_por_id` | INT (FK) | Administrador que confirmó el depósito. |
 
-### 7. HistorialPedido
+### 7. Reembolso
 
-Bitácora de cambios de estado para dar seguimiento a cada pedido.
+Devolución de dinero de un pedido con pago verificado. El reembolso puede estar `solicitado` o `realizado`.
 
 | Campo | Tipo de Dato | Descripción |
 |---|---|---|
-| `id` | INT (PK) | Identificador único. |
-| `pedido_id` | INT (FK) | Pedido cuyo estado cambió. |
-| `estado_anterior` | VARCHAR | Estado antes del cambio. |
-| `estado_nuevo` | VARCHAR | Estado después del cambio. |
-| `usuario_id` | INT (FK) | Usuario que realizó el cambio; puede estar vacío si fue automático. |
-| `fecha_hora` | TIMESTAMP | Fecha y hora del cambio. |
-| `nota` | TEXT | Motivo o comentario del cambio. |
+| `id_reembolso` | INT (PK) | Identificador único. |
+| `id_pedido` | INT (FK) | Pedido correspondiente. |
+| `monto` | DECIMAL(10,2) | Monto devuelto. |
+| `estado` | VARCHAR | `solicitado` o `realizado`. |
+| `fecha_solicitud` | TIMESTAMP | Fecha de solicitud. |
+| `fecha_realizado` | TIMESTAMP | Fecha de devolución, si corresponde. |
+| `id_gestor` | INT (FK) | Administrador que gestionó el reembolso. |
+| `observacion` | VARCHAR | Observaciones. |
 
 ### Puntos iniciales por producto
 
@@ -163,13 +179,13 @@ Los puntos representan capacidad de producción; no son visibles para el cliente
 ## Reglas iniciales de operación
 
 - Las compras web se habilitan de lunes a viernes, de 9:00 a 18:00. El catálogo sigue visible fuera de ese horario.
-- Las entregas y retiros se programan todos los días de 7:00 a 20:00, en franjas de una hora.
+- Las entregas y retiros se programan todos los días de 7:00 a 20:00.
 - La entrega se programa con al menos 24 horas de anticipación y hasta 5 días adelante.
 - Cada fecha dispone inicialmente de 500 puntos. Un pedido normal no puede superar ese límite.
 - Se permiten varios pedidos pendientes de pago por cliente.
-- Domicilio dentro de Sucre cuesta Bs 13; el retiro no tiene costo. Si un pedido pagado cambia de domicilio a retiro, se registra el reembolso de Bs 13 y el cambio.
+- Domicilio dentro de Sucre cuesta Bs 13; el retiro no tiene costo. La modalidad no se cambia después de comprar.
 - Las tortas personalizadas se cotizan por WhatsApp y el equipo registra el pedido con el precio acordado.
-- El cliente paga con el QR fijo de Miskila y envía el comprobante por WhatsApp. El administrador verifica el depósito.
+- El cliente paga con el QR fijo de Miskila. El comprobante por WhatsApp es opcional; el administrador verifica el depósito.
 - La zona horaria del sistema es `America/La_Paz`.
 
 ## Tecnologías y estructura requerida
@@ -179,5 +195,3 @@ Los puntos representan capacidad de producción; no son visibles para el cliente
 - Frontend: Vue.js, Axios y plantilla Bootstrap, en `frontend_miskila`.
 - Directorio raíz y repositorio: `sis257_miskila`.
 - Documentación de la API: Swagger.
-
-Los precios del catálogo, los términos de uso, la política completa de reembolsos y la imagen definitiva del QR se confirmarán antes de completar la implementación.

@@ -1,0 +1,18 @@
+export const NEGOCIO_CONFIG = {
+  zonaHoraria: 'America/La_Paz',
+  horaCompraInicio: '09:00',
+  horaCompraFin: '18:00',
+  horaEntregaInicio: '07:00',
+  horaEntregaFin: '20:00',
+  anticipacionMinimaHoras: 24,
+  anticipacionMaximaDias: 5,
+  costoDomicilio: 13,
+  plazoPagoHoras: 8,
+  suspensionPagoDias: 7,
+  suspensionCancelacionesHoras: 24,
+  horaReembolsoInicio: '09:00',
+  horaReembolsoFin: '18:00',
+  puntosLimitePorDefecto: 500,
+  whatsappUrl: 'https://wa.link/m0juem',
+  qrPath: '/images/qr-miskila.png',
+} as const;

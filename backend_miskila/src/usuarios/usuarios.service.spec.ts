@@ -3,12 +3,11 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { compare } from 'bcryptjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RegisterDto } from '../auth/dto/register.dto.js';
 import {
-  EstadoCuenta,
+  EstadoUsuario,
   RolUsuario,
-  Usuario,
-} from './entities/usuario.entity.js';
+  UsuarioModelo,
+} from '../database/entities/usuario.entity.js';
 import { UsuariosService } from './usuarios.service.js';
 
 describe('UsuariosService', () => {
@@ -35,66 +34,55 @@ describe('UsuariosService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         UsuariosService,
-        { provide: getRepositoryToken(Usuario), useValue: repository },
+        { provide: getRepositoryToken(UsuarioModelo), useValue: repository },
       ],
     }).compile();
     service = moduleRef.get(UsuariosService);
   });
 
   it('registers a client with a hashed password and no staff role', async () => {
-    const input: RegisterDto = {
-      celular: '73463222',
-      contrasena: 'password-segura',
-      aceptaTerminos: true,
-    };
+    const celular = '73463222';
+    const contrasena = 'password-segura';
     repository.save.mockImplementation(async (usuario) => ({
       ...usuario,
-      id: 1,
+      idUsuario: 1,
     }));
 
-    const created = await service.registerCliente(input);
+    const created = await service.register(celular, contrasena);
 
     expect(created).toMatchObject({
-      id: 1,
-      celular: input.celular,
+      idUsuario: 1,
+      celular,
       rol: RolUsuario.CLIENTE,
-      estadoCuenta: EstadoCuenta.ACTIVA,
+      estado: EstadoUsuario.ACTIVO,
     });
-    expect(created).not.toHaveProperty('contrasenaCifrada');
+    expect(created).not.toHaveProperty('contrasena');
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({ rol: RolUsuario.CLIENTE }),
     );
     const passwordHash = repository.create.mock.calls[0][0]
-      .contrasenaCifrada as string;
-    expect(passwordHash).not.toBe(input.contrasena);
-    await expect(compare(input.contrasena, passwordHash)).resolves.toBe(true);
+      .contrasena as string;
+    expect(passwordHash).not.toBe(contrasena);
+    await expect(compare(contrasena, passwordHash)).resolves.toBe(true);
   });
 
   it('rejects registration for a banned cellphone', async () => {
     repository.findOneBy.mockResolvedValue({
-      estadoCuenta: EstadoCuenta.BANEADA,
+      estado: EstadoUsuario.BANEADO,
     });
 
     await expect(
-      service.registerCliente({
-        celular: '73463222',
-        contrasena: 'password-segura',
-        aceptaTerminos: true,
-      }),
+      service.register('73463222', 'password-segura'),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('rejects an already registered cellphone', async () => {
     repository.findOneBy.mockResolvedValue({
-      estadoCuenta: EstadoCuenta.ACTIVA,
+      estado: EstadoUsuario.ACTIVO,
     });
 
     await expect(
-      service.registerCliente({
-        celular: '73463222',
-        contrasena: 'password-segura',
-        aceptaTerminos: true,
-      }),
+      service.register('73463222', 'password-segura'),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 });
