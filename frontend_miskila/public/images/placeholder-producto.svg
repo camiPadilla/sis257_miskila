@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Producto Miskila</title>
+  <desc id="desc">Imagen de muestra para un producto de pastelería</desc>
+  <rect width="800" height="520" fill="#f8e9df"/><circle cx="400" cy="250" r="130" fill="#fff3e8"/>
+  <path d="M300 270c35-80 165-80 200 0v35H300z" fill="#7a343d"/><path d="M315 235c25-45 145-45 170 0" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+  <text x="400" y="390" text-anchor="middle" font-family="sans-serif" font-size="42" font-weight="700" fill="#7a343d">Miskila</text>
+</svg>

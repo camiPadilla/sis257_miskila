@@ -25,6 +25,10 @@ body {
   background: linear-gradient(130deg, #f8e9df 0%, #fff3e8 55%, #f5e1dd 100%);
 }
 
+.producto-card { overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.producto-card:hover { transform: translateY(-3px); }
+.producto-imagen { height: 220px; object-fit: cover; background: #f8e9df; }
+
 .btn-primary {
   --bs-btn-bg: #7a343d;
   --bs-btn-border-color: #7a343d;
