@@ -1,4 +1,10 @@
+<script setup lang="ts">
+import LoginFormView from './LoginFormView.vue'
+</script>
+
 <template>
+  <LoginFormView />
+  <section v-if="false" class="container py-5">
   <section class="container py-5">
     <div class="row justify-content-center">
       <div class="col-12 col-md-6 col-lg-4">

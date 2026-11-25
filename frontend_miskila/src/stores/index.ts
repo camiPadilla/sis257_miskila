@@ -24,6 +24,26 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
+    async register(celular: string, contrasena: string) {
+      this.loading = true
+      try {
+        const { data } = await api.post<Usuario>('/auth/register', { celular, contrasena })
+        return data
+      } finally {
+        this.loading = false
+      }
+    },
+    async completeName(nombreCompleto: string) {
+      this.loading = true
+      try {
+        const { data } = await api.patch<Usuario>('/auth/nombre', { nombreCompleto })
+        this.user = data
+        localStorage.setItem('miskilaUser', JSON.stringify(data))
+        return data
+      } finally {
+        this.loading = false
+      }
+    },
     setSession(data: AuthResponse) {
       this.token = data.accessToken
       this.user = data.usuario
