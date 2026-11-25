@@ -2,12 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import api from '../../plugins/axios'
 import type { Presentacion, Producto } from '../../models/producto'
+import { useCartStore } from '../../stores'
 
 const productos = ref<Producto[]>([])
 const categoriaSeleccionada = ref('Todas')
 const cargando = ref(true)
 const error = ref('')
 const categorias = ['Todas', 'Masitas', 'Rollos', 'Empanadas', 'Pays', 'Cupcakes', 'Tortas']
+const cart = useCartStore()
 
 const productosVisibles = computed(() => categoriaSeleccionada.value === 'Todas'
   ? productos.value
@@ -64,9 +66,12 @@ onMounted(cargarCatalogo)
             <p v-else-if="precioMinimo(producto) !== null" class="fw-semibold mb-2">Desde {{ precioMinimo(producto)?.toFixed(2) }} Bs</p>
             <p v-else class="fw-semibold mb-2">Precio a coordinar</p>
             <ul class="list-group list-group-flush small rounded mb-3">
-              <li v-for="presentacion in producto.presentaciones" :key="presentacion.idPresentacion" class="list-group-item px-0 d-flex justify-content-between gap-2"><span>{{ presentacion.nombre }}<span v-if="presentacion.cantidadPersonas"> · {{ presentacion.cantidadPersonas }} personas</span></span><span class="text-nowrap">{{ mostrarPrecio(presentacion.precio) }}</span></li>
+              <li v-for="presentacion in producto.presentaciones" :key="presentacion.idPresentacion" class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                <span>{{ presentacion.nombre }}<span v-if="presentacion.cantidadPersonas"> · {{ presentacion.cantidadPersonas }} personas</span><br /><span>{{ mostrarPrecio(presentacion.precio) }}</span></span>
+                <button class="btn btn-sm btn-outline-primary text-nowrap" type="button" :disabled="producto.pausado" @click="cart.add({ idPresentacion: presentacion.idPresentacion, nombreProducto: producto.nombre, nombrePresentacion: presentacion.nombre, cantidadPersonas: presentacion.cantidadPersonas, precio: presentacion.precio === null ? null : Number(presentacion.precio) })">Agregar</button>
+              </li>
             </ul>
-            <button class="btn btn-primary w-100" type="button" disabled>{{ producto.pausado ? 'No disponible' : 'Agregar al carrito próximamente' }}</button>
+            <p v-if="producto.pausado" class="small text-secondary mb-0">Este producto no está disponible por ahora.</p>
           </div>
         </article>
       </div>

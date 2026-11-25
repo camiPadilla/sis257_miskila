@@ -28,6 +28,8 @@ body {
 .producto-card { overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .producto-card:hover { transform: translateY(-3px); }
 .producto-imagen { height: 220px; object-fit: cover; background: #f8e9df; }
+.qr-placeholder { min-height: 260px; display: grid; place-items: center; padding: 1rem; background: #fffdfa; border: 1px dashed #d6c4bf; border-radius: 1rem; }
+.qr-placeholder img { max-width: 260px; width: 100%; height: auto; }
 
 .btn-primary {
   --bs-btn-bg: #7a343d;

@@ -16,3 +16,12 @@ export interface Presentacion {
   puntos?: number
   activa: boolean
 }
+
+export interface ItemCarrito {
+  idPresentacion: number
+  nombreProducto: string
+  nombrePresentacion: string
+  cantidadPersonas: number | null
+  precio: number | null
+  cantidad: number
+}

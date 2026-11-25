@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { getStoredUser, getTokenFromLocalStorage } from '../helpers'
 import api from '../plugins/axios'
 import type { AuthResponse, Usuario } from '../models/usuario'
+import type { ItemCarrito } from '../models/producto'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -63,5 +64,32 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('miskilaUser', JSON.stringify(data))
       return data
     },
+  },
+})
+
+function leerCarrito() {
+  const value = localStorage.getItem('miskilaCart')
+  if (!value) return [] as ItemCarrito[]
+  try { return JSON.parse(value) as ItemCarrito[] } catch { return [] as ItemCarrito[] }
+}
+
+export const useCartStore = defineStore('cart', {
+  state: () => ({ items: leerCarrito() }),
+  getters: {
+    totalItems: (state) => state.items.reduce((total, item) => total + item.cantidad, 0),
+    subtotal: (state) => state.items.reduce((total, item) => total + (item.precio ?? 0) * item.cantidad, 0),
+  },
+  actions: {
+    save() { localStorage.setItem('miskilaCart', JSON.stringify(this.items)) },
+    add(item: Omit<ItemCarrito, 'cantidad'>) {
+      const existing = this.items.find((current) => current.idPresentacion === item.idPresentacion)
+      if (existing) existing.cantidad += 1
+      else this.items.push({ ...item, cantidad: 1 })
+      this.save()
+    },
+    increase(idPresentacion: number) { const item = this.items.find((current) => current.idPresentacion === idPresentacion); if (item) item.cantidad += 1; this.save() },
+    decrease(idPresentacion: number) { const item = this.items.find((current) => current.idPresentacion === idPresentacion); if (!item) return; item.cantidad -= 1; if (item.cantidad <= 0) this.remove(idPresentacion); else this.save() },
+    remove(idPresentacion: number) { this.items = this.items.filter((item) => item.idPresentacion !== idPresentacion); this.save() },
+    clear() { this.items = []; this.save() },
   },
 })

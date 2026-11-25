@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useAuthStore } from '../stores'
+import { useAuthStore, useCartStore } from '../stores'
 
 const auth = useAuthStore()
+const cart = useCartStore()
 </script>
 
 <template>
@@ -10,6 +11,7 @@ const auth = useAuthStore()
       <RouterLink class="navbar-brand miskila-brand fw-bold fs-3" to="/">Miskila</RouterLink>
       <div class="d-flex align-items-center gap-3 ms-auto">
         <RouterLink class="link-secondary text-decoration-none" to="/">Inicio</RouterLink>
+        <RouterLink class="link-secondary text-decoration-none" to="/carrito">Carrito ({{ cart.totalItems }})</RouterLink>
         <RouterLink v-if="!auth.isAuthenticated" class="link-secondary text-decoration-none" to="/registro">Registrarse</RouterLink>
         <span v-if="auth.user" class="small text-secondary">{{ auth.user.nombreCompleto || auth.user.celular }}</span>
         <RouterLink v-if="!auth.isAuthenticated" class="btn btn-primary btn-sm" to="/login">Iniciar sesión</RouterLink>

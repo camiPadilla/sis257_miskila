@@ -9,6 +9,8 @@ const router = createRouter({
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
     { path: '/registro', name: 'registro', component: () => import('../views/RegistroView.vue') },
     { path: '/completar-nombre', name: 'completar-nombre', component: () => import('../views/CompletarNombreView.vue'), meta: { requiresAuth: true } },
+    { path: '/carrito', name: 'carrito', component: () => import('../views/CarritoView.vue'), meta: { requiresAuth: true } },
+    { path: '/pago/:id', name: 'pago', component: () => import('../views/PagoView.vue'), meta: { requiresAuth: true } },
   ],
 })
 
