@@ -11,6 +11,8 @@ const router = createRouter({
     { path: '/completar-nombre', name: 'completar-nombre', component: () => import('../views/CompletarNombreView.vue'), meta: { requiresAuth: true } },
     { path: '/carrito', name: 'carrito', component: () => import('../views/CarritoView.vue'), meta: { requiresAuth: true } },
     { path: '/pago/:id', name: 'pago', component: () => import('../views/PagoView.vue'), meta: { requiresAuth: true } },
+    { path: '/mis-pedidos', name: 'mis-pedidos', component: () => import('../views/MisPedidosView.vue'), meta: { requiresAuth: true } },
+    { path: '/mis-pedidos/:id', name: 'pedido-detalle', component: () => import('../views/PedidoDetalleView.vue'), meta: { requiresAuth: true } },
   ],
 })
 
