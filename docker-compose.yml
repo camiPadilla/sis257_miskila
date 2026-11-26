@@ -19,5 +19,42 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend_miskila
+    container_name: miskila-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      FRONTEND_ORIGIN: http://localhost:5173
+      RUN_MIGRATIONS: 'true'
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: local_dev_password
+      DB_NAME: sis257_miskila
+      JWT_SECRET: local_dev_secret_miskila_change_me_2026
+      JWT_EXPIRES_IN: 1h
+      SEED_ADMIN_CELULAR: 70000000
+      SEED_ADMIN_CONTRASENA: local_admin_password
+    ports:
+      - '3000:3000'
+
+  frontend:
+    build:
+      context: ./frontend_miskila
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: miskila-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '5173:80'
+
 volumes:
   miskila_postgres_data:

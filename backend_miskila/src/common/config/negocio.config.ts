@@ -14,5 +14,5 @@ export const NEGOCIO_CONFIG = {
   horaReembolsoFin: '18:00',
   puntosLimitePorDefecto: 500,
   whatsappUrl: 'https://wa.link/m0juem',
-  qrPath: '/images/qr-miskila.png',
+  qrPath: '/images/qrmiskila.jpg',
 } as const;

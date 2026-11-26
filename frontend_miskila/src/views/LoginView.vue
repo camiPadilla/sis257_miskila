@@ -5,7 +5,6 @@ import LoginFormView from './LoginFormView.vue'
 <template>
   <LoginFormView />
   <section v-if="false" class="container py-5">
-  <section class="container py-5">
     <div class="row justify-content-center">
       <div class="col-12 col-md-6 col-lg-4">
         <div class="card border-0 shadow-sm">

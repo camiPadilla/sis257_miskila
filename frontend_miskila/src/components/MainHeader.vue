@@ -13,6 +13,7 @@ const cart = useCartStore()
         <RouterLink class="link-secondary text-decoration-none" to="/">Inicio</RouterLink>
         <RouterLink class="link-secondary text-decoration-none" to="/carrito">Carrito ({{ cart.totalItems }})</RouterLink>
         <RouterLink v-if="auth.isAuthenticated" class="link-secondary text-decoration-none" to="/mis-pedidos">Mis pedidos</RouterLink>
+        <RouterLink v-if="auth.isStaff" class="link-secondary text-decoration-none" to="/panel">Panel</RouterLink>
         <RouterLink v-if="!auth.isAuthenticated" class="link-secondary text-decoration-none" to="/registro">Registrarse</RouterLink>
         <span v-if="auth.user" class="small text-secondary">{{ auth.user.nombreCompleto || auth.user.celular }}</span>
         <RouterLink v-if="!auth.isAuthenticated" class="btn btn-primary btn-sm" to="/login">Iniciar sesión</RouterLink>
